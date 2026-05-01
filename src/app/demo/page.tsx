@@ -18,6 +18,11 @@ export default function DemoRoleSelection() {
     router.push("/demo/patient/auth");
   };
 
+  const handleDoctorClick = () => {
+    setRole("doctor");
+    router.push("/demo/doctor/auth");
+  };
+
   return (
     <>
       <DemoNavbar title="Role Selection" />
@@ -72,41 +77,40 @@ export default function DemoRoleSelection() {
           </Card>
 
           {/* Doctor Card */}
-          <div className="relative">
-            <Card hover padding="lg" className="opacity-80 h-full">
-              <div className="w-14 h-14 bg-bgLight rounded-2xl flex items-center justify-center mb-4">
-                <Stethoscope className="text-secondary" size={28} />
-              </div>
+          <Card hover padding="lg" onClick={handleDoctorClick} className="relative cursor-pointer">
+            <div className="w-14 h-14 bg-bgLight rounded-2xl flex items-center justify-center mb-4">
+              <Stethoscope className="text-secondary" size={28} />
+            </div>
 
-              <div className="absolute top-8 right-8 z-10">
-                <span className="bg-warning/10 text-warning text-[10px] font-bold px-2 py-0.5 rounded-full border border-warning/30 uppercase tracking-wide">
-                  COMING SOON
-                </span>
-              </div>
+            <div className="absolute top-8 right-8">
+              <span className="bg-success/10 text-success text-[10px] font-bold px-2 py-0.5 rounded-full border border-success/30 uppercase tracking-wide">
+                LIVE DEMO
+              </span>
+            </div>
 
-              <h2 className="font-display text-xl text-primary font-bold mt-4">
-                Enter as Doctor / Clinic
-              </h2>
-              <p className="text-sm text-secondary mt-2 leading-relaxed">
-                Access the physician dashboard, patient queue, and AI-assisted triage management system.
-              </p>
+            <h2 className="font-display text-xl text-primary font-bold mt-4">
+              Enter as Doctor / Clinic
+            </h2>
+            <p className="text-sm text-secondary mt-2 leading-relaxed">
+              Access the physician dashboard, patient queue, and AI-assisted triage management system.
+            </p>
 
-              <div className="mt-4 space-y-2">
-                {["Patient Queue Management", "AI Triage Override", "Analytics Dashboard"].map((feature) => (
-                  <div key={feature} className="flex items-center gap-2">
-                    <CheckCircle className="text-secondary w-3.5 h-3.5" />
-                    <span className="text-sm text-primary/70">{feature}</span>
-                  </div>
-                ))}
-              </div>
+            <div className="mt-4 space-y-2">
+              {["Patient Queue Management", "AI Triage Override", "Analytics Dashboard"].map((feature) => (
+                <div key={feature} className="flex items-center gap-2">
+                  <CheckCircle className="text-secondary w-3.5 h-3.5" />
+                  <span className="text-sm text-primary/70">{feature}</span>
+                </div>
+              ))}
+            </div>
 
-              <Button variant="secondary" className="w-full mt-6 pointer-events-none" disabled>
-                Doctor Dashboard →
-              </Button>
-            </Card>
-            {/* Overlay to catch clicks */}
-            <div className="absolute inset-0 rounded-2xl z-20 cursor-not-allowed" />
-          </div>
+            <Button variant="primary" className="w-full mt-6" onClick={(e) => {
+              e.stopPropagation();
+              handleDoctorClick();
+            }}>
+              Doctor Dashboard →
+            </Button>
+          </Card>
         </div>
 
         <p className="mt-10 text-center text-xs text-primary/40">

@@ -19,24 +19,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // 1. Check localStorage first
-    const stored = localStorage.getItem("mediflow-theme") as Theme | null;
-    // 2. Fall back to system preference
-    const preferred: Theme = window.matchMedia("(prefers-color-scheme: dark)").matches
-      ? "dark"
-      : "light";
-    const initial = stored ?? preferred;
-
-    setTheme(initial);
-    document.documentElement.classList.toggle("dark", initial === "dark");
+    // Force light mode
+    document.documentElement.classList.remove("dark");
+    setTheme("light");
     setMounted(true);
   }, []);
 
   const toggleTheme = () => {
-    const next: Theme = theme === "light" ? "dark" : "light";
-    setTheme(next);
-    document.documentElement.classList.toggle("dark", next === "dark");
-    localStorage.setItem("mediflow-theme", next);
+    // Theme toggle disabled
   };
 
   // Prevent flash: render children always, theme applies via class on <html>

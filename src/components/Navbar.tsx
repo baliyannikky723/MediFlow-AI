@@ -7,7 +7,6 @@ import { useTheme } from "./ThemeProvider";
 
 const navLinks = [
   { label: "Home",         href: "#hero" },
-  { label: "Platform",     href: "#platform" },
   { label: "How It Works", href: "#how-it-works" },
   { label: "Features",     href: "#features" },
   { label: "Contact",      href: "/demo" },
@@ -57,19 +56,6 @@ export function Navbar() {
 
         {/* Right actions */}
         <div className="flex items-center gap-3">
-          {/* Theme toggle */}
-          <button
-            onClick={toggleTheme}
-            title="Toggle theme"
-            aria-label="Toggle theme"
-            className="w-9 h-9 flex items-center justify-center rounded-full border transition-all duration-200
-              bg-bgSoft hover:bg-bgLight border-bgSoft text-primary
-              dark:bg-white/10 dark:hover:bg-white/20 dark:border-white/10 dark:text-white"
-          >
-            <span key={theme} className="icon-spin-active">
-              {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
-            </span>
-          </button>
 
           {/* CTA */}
           <a
@@ -115,13 +101,6 @@ export function Navbar() {
           </div>
 
           <div className="flex items-center gap-3 pt-4 mt-2 border-t border-bgSoft dark:border-white/10">
-            <button
-              onClick={() => { toggleTheme(); setMobileOpen(false); }}
-              className="flex items-center gap-2 text-sm font-medium text-primary dark:text-white"
-            >
-              {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
-              {theme === "dark" ? "Light Mode" : "Dark Mode"}
-            </button>
             <a
               href="/demo"
               onClick={() => setMobileOpen(false)}
