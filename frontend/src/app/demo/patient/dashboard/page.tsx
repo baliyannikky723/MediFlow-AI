@@ -2,12 +2,10 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Activity, CheckCircle, Circle } from "lucide-react";
-import { Badge } from "../../../../components/ui/Badge";
-import { DemoNavbar } from "../../../../components/layout/DemoNavbar";
+import { Activity, CalendarDays, Droplet, Ruler, Weight, Phone, Mail, MapPin } from "lucide-react";
 import { PatientSidebar } from "../../../../components/patient/PatientSidebar";
 import HealthChat from "../../../../components/patient/HealthChat";
-import { appointmentsApi, authApi, type Appointment } from "../../../../lib/api";
+import { authApi } from "../../../../lib/api";
 
 interface UserProfile {
   id?: string;
@@ -18,315 +16,161 @@ interface UserProfile {
   bloodGroup?: string;
   height?: string;
   weight?: string;
+  phone?: string;
+  address?: string;
   conditions?: string[];
   medications?: string;
   allergies?: string;
 }
 
-interface HealthRecord {
-  date: string;
-  symptoms: string;
-  severity: string;
-  riskLevel: string;
-  aiSummary: string;
-  suggestions?: string[];
-}
-
 export default function PatientDashboardPage() {
   const router = useRouter();
-  const [user, setUser]             = useState<UserProfile | null>(null);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [history, setHistory]       = useState<HealthRecord[]>([]);
-  const [loadingAppts, setLoadingAppts] = useState(false);
+  const [user, setUser] = useState<UserProfile | null>(null);
 
-  /* ── Load user from token via /api/auth/me ── */
   useEffect(() => {
     const token = typeof window !== "undefined" ? localStorage.getItem("mediflow_token") : null;
+    if (!token) { router.replace("/demo/patient/auth"); return; }
 
-    if (!token) {
-      router.replace("/demo/patient/auth");
-      return;
-    }
-
-    // Try to get profile from /api/auth/me; fallback to cached localStorage
     authApi.me()
       .then(res => {
         const merged = {
-          ...(typeof window !== "undefined"
-            ? (() => { try { return JSON.parse(localStorage.getItem("mediflow_user") || "{}"); } catch { return {}; } })()
-            : {}),
+          ...(typeof window !== "undefined" ? JSON.parse(localStorage.getItem("mediflow_user") || "{}") : {}),
           ...res.user,
         };
         setUser(merged);
-        // Also cache it locally for HealthChat
-        if (typeof window !== "undefined") {
-          localStorage.setItem("mediflow_user", JSON.stringify(merged));
-        }
+        if (typeof window !== "undefined") localStorage.setItem("mediflow_user", JSON.stringify(merged));
       })
       .catch(() => {
-        // Fallback: use whatever was cached
         try {
           const cached = localStorage.getItem("mediflow_user");
-          if (cached) {
-            setUser(JSON.parse(cached));
-          } else {
-            router.replace("/demo/patient/auth");
-          }
-        } catch {
-          router.replace("/demo/patient/auth");
-        }
+          if (cached) setUser(JSON.parse(cached));
+          else router.replace("/demo/patient/auth");
+        } catch { router.replace("/demo/patient/auth"); }
       });
   }, [router]);
 
-  /* ── Load appointments from backend ── */
-  const loadAppointments = async () => {
-    setLoadingAppts(true);
-    try {
-      const res = await appointmentsApi.getAll();
-      setAppointments(res.appointments || []);
-    } catch {
-      // Fallback to localStorage appointments
-      try {
-        const stored = localStorage.getItem("mediflow_appointments");
-        if (stored) setAppointments(JSON.parse(stored));
-      } catch { /* ignore */ }
-    } finally {
-      setLoadingAppts(false);
-    }
-  };
-
-  /* ── Load health history from localStorage (written by HealthChat) ── */
-  const loadHistory = () => {
-    try {
-      const stored = localStorage.getItem("mediflow_health_history");
-      if (stored) setHistory(JSON.parse(stored));
-    } catch { /* ignore */ }
-  };
-
-  useEffect(() => {
-    if (!user) return;
-    loadAppointments();
-    loadHistory();
-
-    const onApptUpdate = () => loadAppointments();
-    const onHistUpdate = () => loadHistory();
-    window.addEventListener("appointmentUpdated", onApptUpdate);
-    window.addEventListener("healthHistoryUpdated", onHistUpdate);
-    window.addEventListener("healthUpdated", onHistUpdate);
-    return () => {
-      window.removeEventListener("appointmentUpdated", onApptUpdate);
-      window.removeEventListener("healthHistoryUpdated", onHistUpdate);
-      window.removeEventListener("healthUpdated", onHistUpdate);
-    };
-  }, [user]);
-
   if (!user) return null;
 
-  const upcoming = appointments
-    .filter(a => a.status === "upcoming" || a.status === "confirmed")
-    .slice(0, 3);
-  const latestAnalysis = history.length > 0 ? history[0] : null;
-
   return (
-    <>
-      <DemoNavbar title="Patient Dashboard" />
-      <div className="flex min-h-screen bg-[#eef8fc]">
-        <PatientSidebar
-          activeTab="overview"
-          onTabChange={() => {}}
-          patientName={user.name}
-          riskLabel="Active"
-          riskColor="bg-success/10 text-success border-success/30"
-        />
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#F8FAFC' }}>
+      <PatientSidebar
+        activeTab="overview"
+        onTabChange={() => {}}
+        patientName={user.name}
+        riskLabel="Active"
+        riskColor="bg-green-100 text-green-700 border-green-200"
+      />
 
-        <main className="flex-1 p-6 lg:p-10 overflow-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        
+        {/* Page Header */}
+        <div style={{ padding: '20px 32px', borderBottom: '1px solid #E2E8F0', background: '#F8FAFC', flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <p style={{ color: '#64748B', fontSize: '13px', fontWeight: 500, margin: 0 }}>Patient Portal</p>
+            <h2 style={{ color: '#0F172A', fontSize: '22px', fontWeight: 700, margin: '2px 0 0 0' }}>Dashboard</h2>
+          </div>
+          <span style={{ color: '#94A3B8', fontSize: '13px' }}>
+            {new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          </span>
+        </div>
 
-            {/* ─── LEFT COLUMN ─── */}
-            <div className="lg:col-span-1 space-y-8">
+        {/* Two-column layout */}
+        <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 420px', overflow: 'hidden' }}>
 
-              {/* Profile Card */}
-              <div className="animate-fadeUp">
-                <h2 className="font-display text-xl text-primary font-bold mb-4">Patient Profile</h2>
-                <div className="bg-white border-none shadow-md rounded-2xl p-6">
-                  <div className="space-y-5 text-base">
-                    <div className="grid grid-cols-2 gap-y-4">
-                      <div>
-                        <span className="text-primary/50 text-xs block uppercase tracking-wider font-bold mb-1">Name</span>
-                        <span className="font-bold text-primary text-lg">{user.name}</span>
-                      </div>
-                      <div>
-                        <span className="text-primary/50 text-xs block uppercase tracking-wider font-bold mb-1">Age / Gender</span>
-                        <span className="font-bold text-primary text-lg">
-                          {user.age ? `${user.age}, ` : ""}{user.gender || "—"}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-primary/50 text-xs block uppercase tracking-wider font-bold mb-1">Blood Group</span>
-                        <span className="font-bold text-primary text-lg">{user.bloodGroup || "—"}</span>
-                      </div>
-                      <div>
-                        <span className="text-primary/50 text-xs block uppercase tracking-wider font-bold mb-1">Vitals</span>
-                        <span className="font-bold text-primary text-lg">
-                          {user.height ? `${user.height}cm` : "—"}{user.weight ? `, ${user.weight}kg` : ""}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="border-t border-bgSoft pt-4">
-                      <span className="text-primary/50 text-xs block uppercase tracking-wider font-bold mb-2">Conditions</span>
-                      <div className="flex flex-wrap gap-2">
-                        {user.conditions && user.conditions.length > 0
-                          ? user.conditions.map(c => <Badge key={c} variant="normal" size="md">{c}</Badge>)
-                          : <span className="text-primary/70 font-medium text-lg">None</span>}
-                      </div>
-                    </div>
-                    <div>
-                      <span className="text-primary/50 text-xs block uppercase tracking-wider font-bold mb-1">Medications</span>
-                      <span className="font-bold text-primary text-lg">{user.medications || "None"}</span>
-                    </div>
-                    <div>
-                      <span className="text-primary/50 text-xs block uppercase tracking-wider font-bold mb-1">Allergies</span>
-                      <span className="font-bold text-primary text-lg">{user.allergies || "None"}</span>
-                    </div>
+          {/* LEFT: Profile & Medical Info — scrollable */}
+          <div style={{ overflowY: 'auto', padding: '28px 32px', borderRight: '1px solid #E2E8F0' }}>
+
+            {/* Vitals Row */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
+              {[
+                { icon: <Droplet size={22} />, bg: '#EFF6FF', color: '#2563EB', label: 'BLOOD GROUP', value: user.bloodGroup || 'O+', unit: '' },
+                { icon: <CalendarDays size={22} />, bg: '#EEF2FF', color: '#4F46E5', label: 'AGE / GENDER', value: `${user.age || '28'} ${user.gender === 'M' ? 'M' : user.gender === 'F' ? 'F' : 'U'}`, unit: '' },
+                { icon: <Ruler size={22} />, bg: '#ECFDF5', color: '#059669', label: 'HEIGHT', value: user.height || '175', unit: 'cm' },
+                { icon: <Weight size={22} />, bg: '#FFF7ED', color: '#EA580C', label: 'WEIGHT', value: user.weight || '70', unit: 'kg' },
+              ].map((v, i) => (
+                <div key={i} style={{ background: '#FFFFFF', borderRadius: '16px', padding: '18px 20px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: v.bg, color: v.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    {v.icon}
                   </div>
+                  <div>
+                    <p style={{ color: '#64748B', fontSize: '10px', fontWeight: 700, letterSpacing: '0.5px', margin: '0 0 2px 0' }}>{v.label}</p>
+                    <p style={{ color: '#0F172A', fontSize: '18px', fontWeight: 800, margin: 0 }}>
+                      {v.value} {v.unit && <span style={{ fontSize: '12px', color: '#94A3B8', fontWeight: 500 }}>{v.unit}</span>}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Personal + Medical side by side */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              
+              {/* Personal Info */}
+              <div style={{ background: '#FFFFFF', borderRadius: '16px', padding: '24px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                <h3 style={{ color: '#0F172A', fontSize: '15px', fontWeight: 700, margin: '0 0 20px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Activity size={17} color="#1B4965" /> Personal Information
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {[
+                    { icon: <Mail size={17} />, label: 'EMAIL ADDRESS', value: user.email },
+                    { icon: <Phone size={17} />, label: 'PHONE NUMBER', value: user.phone || '+1 (555) 000-0000' },
+                    { icon: <MapPin size={17} />, label: 'ADDRESS', value: user.address || '123 Medical Drive, Health City, NY 10001' },
+                  ].map((row, i) => (
+                    <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                      <span style={{ color: '#94A3B8', marginTop: '2px', flexShrink: 0 }}>{row.icon}</span>
+                      <div>
+                        <p style={{ color: '#64748B', fontSize: '10px', fontWeight: 700, letterSpacing: '0.5px', margin: '0 0 2px 0' }}>{row.label}</p>
+                        <p style={{ color: '#0F172A', fontSize: '14px', fontWeight: 500, margin: 0 }}>{row.value}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              {/* Upcoming Appointments */}
-              <div id="appointments-section" className="animate-fadeUp flex flex-col">
-                <h2 className="font-display text-xl text-primary font-bold mb-4">Upcoming Appointments</h2>
-                <div className="bg-white border-none shadow-md rounded-2xl p-6 flex-1 flex flex-col">
-                  {loadingAppts ? (
-                    <div className="flex-1 flex items-center justify-center">
-                      <span className="text-primary/40 text-sm">Loading appointments…</span>
+              {/* Medical History */}
+              <div style={{ background: '#FFFFFF', borderRadius: '16px', padding: '24px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                <h3 style={{ color: '#0F172A', fontSize: '15px', fontWeight: 700, margin: '0 0 20px 0' }}>Medical History</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div>
+                    <p style={{ color: '#64748B', fontSize: '10px', fontWeight: 700, letterSpacing: '0.5px', margin: '0 0 8px 0' }}>CHRONIC CONDITIONS</p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {user.conditions && user.conditions.length > 0
+                        ? user.conditions.map(c => <span key={c} style={{ background: '#FFF1F2', color: '#BE123C', border: '1px solid #FECDD3', padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 600 }}>{c}</span>)
+                        : <span style={{ color: '#64748B', fontSize: '13px' }}>None recorded</span>}
                     </div>
-                  ) : upcoming.length > 0 ? (
-                    <div className="space-y-3 flex-1">
-                      {upcoming.map((apt, i) => (
-                        <div key={apt._id || i} className="flex justify-between items-center bg-bgLight/50 p-4 rounded-xl border border-bgSoft hover:bg-bgLight transition-colors">
-                          <div>
-                            <p className="font-bold text-primary text-base">{apt.doctorName || "Doctor"}</p>
-                            <p className="text-sm text-primary/70 mt-1">
-                              {apt.specialization ? `${apt.specialization} · ` : ""}
-                              {apt.dateTime
-                                ? new Date(apt.dateTime).toLocaleDateString()
-                                : "Date TBD"}
-                            </p>
-                          </div>
-                          <Badge variant="success" size="md">Confirmed</Badge>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex-1 flex items-center justify-center bg-bgLight/50 border border-bgSoft rounded-xl p-6 text-center">
-                      <p className="text-base font-semibold text-primary/60">No upcoming appointments</p>
-                    </div>
-                  )}
-                  <button
-                    onClick={() => router.push("/demo/patient/appointments")}
-                    className="mt-5 text-sm font-bold text-accent hover:text-primary transition-colors flex items-center justify-center gap-1 w-full bg-accent/5 py-2.5 rounded-xl"
-                  >
-                    View All Appointments <ArrowRight size={16} />
-                  </button>
+                  </div>
+                  <div>
+                    <p style={{ color: '#64748B', fontSize: '10px', fontWeight: 700, letterSpacing: '0.5px', margin: '0 0 6px 0' }}>CURRENT MEDICATIONS</p>
+                    <p style={{ color: '#0F172A', fontSize: '13px', fontWeight: 500, background: '#F8FAFC', padding: '10px 12px', borderRadius: '8px', border: '1px solid #E2E8F0', margin: 0 }}>{user.medications || 'None'}</p>
+                  </div>
+                  <div>
+                    <p style={{ color: '#64748B', fontSize: '10px', fontWeight: 700, letterSpacing: '0.5px', margin: '0 0 6px 0' }}>KNOWN ALLERGIES</p>
+                    <p style={{ color: '#0F172A', fontSize: '13px', fontWeight: 500, background: '#F8FAFC', padding: '10px 12px', borderRadius: '8px', border: '1px solid #E2E8F0', margin: 0 }}>{user.allergies || 'None'}</p>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* ─── RIGHT COLUMN ─── */}
-            <div className="lg:col-span-2 flex flex-col gap-8">
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+          </div>
 
-                {/* Clinical Triage Chat */}
-                <div className="flex flex-col animate-fadeUp" id="chat-section">
-                  <h2 className="font-display text-xl text-primary font-bold mb-4">Clinical Triage Chat</h2>
-                  <div className="bg-[#f0f7fb] border border-bgSoft rounded-2xl overflow-hidden shadow-md h-[450px] relative [&>div]:h-full">
-                    <HealthChat />
-                  </div>
-                </div>
-
-                {/* Agentic Intelligence Breakdown */}
-                <div id="ai-analysis-section" className="animate-fadeUp flex flex-col">
-                  <h2 className="font-display text-xl text-primary font-bold mb-4">Agentic Intelligence Breakdown</h2>
-                  <div className="bg-white border-none shadow-md rounded-2xl p-6 flex-1 flex flex-col">
-                    <div className="flex items-center gap-3 mb-6">
-                      <Activity size={24} className="text-accent" />
-                      <h3 className="font-display text-lg font-bold text-primary">Agent Thinking</h3>
-                    </div>
-
-                    {latestAnalysis ? (
-                      <div className="space-y-4 flex-1">
-                        <div className="flex items-center gap-3 bg-success/10 px-4 py-3 rounded-xl border border-success/20">
-                          <CheckCircle size={18} className="text-success" />
-                          <span className="font-semibold text-primary text-[15px]">Analyzing symptoms</span>
-                        </div>
-                        <div className="flex items-center gap-3 bg-success/10 px-4 py-3 rounded-xl border border-success/20">
-                          <CheckCircle size={18} className="text-success" />
-                          <span className="font-semibold text-primary text-[15px]">Asking follow-ups</span>
-                        </div>
-                        <div className="flex items-center justify-between bg-accent/10 px-4 py-3 rounded-xl border border-accent/20">
-                          <div className="flex items-center gap-3">
-                            <CheckCircle size={18} className="text-accent" />
-                            <span className="font-semibold text-primary text-[15px]">Evaluating urgency</span>
-                          </div>
-                          <Badge
-                            variant={
-                              latestAnalysis.riskLevel?.toLowerCase().includes("high") ? "emergency"
-                              : latestAnalysis.riskLevel?.toLowerCase().includes("moderate") ? "warning"
-                              : "success"
-                            }
-                            size="sm"
-                          >
-                            {latestAnalysis.riskLevel || "Analyzed"}
-                          </Badge>
-                        </div>
-                        <div className="flex flex-col gap-2 bg-bgLight/50 px-4 py-3 rounded-xl border border-bgSoft">
-                          <div className="flex items-center gap-3">
-                            <CheckCircle size={18} className="text-primary/50" />
-                            <span className="font-semibold text-primary text-[15px]">Recommended Action</span>
-                          </div>
-                          <p className="text-[14px] text-primary/70 ml-8 font-medium">
-                            {latestAnalysis.suggestions?.[0] || "Consult a specialist based on symptoms."}
-                          </p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-4 flex-1">
-                        <div className="flex items-center gap-3 bg-success/10 px-4 py-3 rounded-xl border border-success/20">
-                          <CheckCircle size={18} className="text-success" />
-                          <span className="font-semibold text-primary text-[15px]">Analyzing symptoms</span>
-                        </div>
-                        <div className="flex items-center gap-3 bg-success/10 px-4 py-3 rounded-xl border border-success/20">
-                          <CheckCircle size={18} className="text-success" />
-                          <span className="font-semibold text-primary text-[15px]">Asking follow-ups</span>
-                        </div>
-                        <div className="flex items-center justify-between bg-accent/10 px-4 py-3 rounded-xl border border-accent/20">
-                          <div className="flex items-center gap-3">
-                            <ArrowRight size={18} className="text-accent" />
-                            <span className="font-semibold text-primary text-[15px]">Evaluating urgency</span>
-                          </div>
-                          <span className="text-[11px] font-bold text-accent uppercase tracking-wider bg-accent/20 px-2 py-1 rounded-md border border-accent/30">
-                            in progress
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between bg-bgLight/50 px-4 py-3 rounded-xl border border-bgSoft">
-                          <div className="flex items-center gap-3">
-                            <Circle size={18} className="text-primary/30" />
-                            <span className="font-semibold text-primary/70 text-[15px]">Deciding next action</span>
-                          </div>
-                          <span className="text-[11px] font-bold text-primary/40 uppercase tracking-wider bg-white px-2 py-1 rounded-md border border-bgSoft">
-                            pending
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-              </div>
+          {/* RIGHT: Floating AI Chat Widget */}
+          <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '16px 20px 16px 12px' }}>
+            <div style={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              borderRadius: '20px',
+              border: '1.5px solid #D1D5DB',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.10), 0 2px 8px rgba(27,73,101,0.08)',
+              background: '#FFFFFF',
+            }}>
+              <HealthChat />
             </div>
           </div>
-        </main>
+
+        </div>
       </div>
-    </>
+    </div>
   );
 }
