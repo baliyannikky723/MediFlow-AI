@@ -78,6 +78,10 @@ function parseApptTime(dateTime?: string): { hour: string; min: string } {
 export default function Dashboard() {
   const [patientFilter, setPatientFilter] = useState('all');
 
+  // Logged-in doctor info
+  const [doctorUser, setDoctorUser] = useState<any>(null);
+  const [myAppointments, setMyAppointments] = useState<Appointment[]>([]);
+
   // Live data
   const [summary, setSummary]         = useState<DashboardSummary | null>(null);
   const [visitData, setVisitData]     = useState<MonthlyVisit[]>([]);
@@ -87,6 +91,14 @@ export default function Dashboard() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading]         = useState(true);
   const [error, setError]             = useState('');
+
+  // Read logged-in doctor info
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('mediflow_doctor_user');
+      if (stored) setDoctorUser(JSON.parse(stored));
+    } catch { /* ignore */ }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -117,14 +129,20 @@ export default function Dashboard() {
         if (visitsRes.status   === 'fulfilled') setVisitData(visitsRes.value.data || []);
         if (distRes.status     === 'fulfilled') {
           const raw = distRes.value.data || [];
-          // Ensure each item has a color
           setCaseDist(raw.map(c => ({ ...c, color: c.color || CASE_COLORS[c.name] || '#6b9ab8' })));
         }
-        if (patientsRes.status === 'fulfilled') setPatients(patientsRes.value.patients || []);
-        if (doctorsRes.status  === 'fulfilled') setDoctors(doctorsRes.value.doctors || []);
-        if (apptRes.status     === 'fulfilled') setAppointments(apptRes.value.appointments || []);
+        if (patientsRes.status === 'fulfilled') setPatients((patientsRes.value as any).patients || (patientsRes.value as any).data || []);
+        if (doctorsRes.status  === 'fulfilled') setDoctors((doctorsRes.value as any).doctors || (doctorsRes.value as any).data || []);
+        if (apptRes.status     === 'fulfilled') setAppointments((apptRes.value as any).data || (apptRes.value as any).appointments || []);
 
-        // If every request failed, show an error
+        // Fetch this doctor's appointments
+        if (doctorUser?.id) {
+          try {
+            const myRes = await appointmentsApi.getAll({ doctorId: doctorUser.id });
+            if (!cancelled) setMyAppointments(myRes.appointments || []);
+          } catch { /* ignore */ }
+        }
+
         const allFailed = [summaryRes, visitsRes, distRes, patientsRes, doctorsRes, apptRes]
           .every(r => r.status === 'rejected');
         if (allFailed) setError('Could not reach backend. Make sure your server is running on http://localhost:5000.');
@@ -136,8 +154,11 @@ export default function Dashboard() {
     }
 
     fetchAll();
-    return () => { cancelled = true; };
-  }, []);
+
+    // Auto-refresh every 30 seconds for realtime updates
+    const interval = setInterval(fetchAll, 30000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [doctorUser]);
 
   /* ─── Derived KPI cards ── */
   const kpiCards = [
@@ -335,6 +356,82 @@ export default function Dashboard() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* 3.5 ── My Patients (doctor-specific) */}
+      {doctorUser && myAppointments.length > 0 && (
+        <div className="card animate-in" style={{ marginBottom: 24 }}>
+          <div className="card-header">
+            <div>
+              <div className="section-title">🩺 My Patients</div>
+              <div className="section-sub">
+                {myAppointments.filter(a => !['cancelled', 'Cancelled'].includes(a.status)).length} active appointments for Dr. {doctorUser.name?.replace('Dr. ', '')}
+              </div>
+            </div>
+          </div>
+          <div style={{ padding: '0 16px 16px' }}>
+            {myAppointments
+              .filter(a => !['cancelled', 'Cancelled'].includes(a.status))
+              .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+              .map((apt, i) => {
+                const priority = apt.priority === 'emergency' ? 'emergency' : apt.priority === 'warning' ? 'warning' : 'success';
+                const cfg = PRIORITY_CONFIG[priority];
+                const apptDate = new Date(apt.date);
+                const isToday = apptDate.toDateString() === new Date().toDateString();
+                return (
+                  <div key={apt._id || i} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '14px 16px', borderRadius: 12,
+                    background: isToday ? '#f0fdf4' : '#fafbfc',
+                    border: `1px solid ${isToday ? '#bbf7d0' : 'var(--border)'}`,
+                    marginBottom: 10,
+                    transition: 'all 0.2s',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                      <div className="avatar avatar-sm" style={{
+                        background: priority === 'emergency' ? 'var(--danger)' : priority === 'warning' ? 'var(--warning)' : 'var(--secondary)',
+                      }}>
+                        {(apt.patientName || 'P').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--primary)' }}>
+                          {apt.patientName || 'Patient'}
+                        </div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                          {apt.reason || 'Consultation'}
+                        </div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                          📅 {apptDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          {' · '}
+                          🕐 {apt.timeSlot || '10:00'}
+                          {isToday && <span style={{ color: '#16a34a', fontWeight: 700, marginLeft: 8 }}>● TODAY</span>}
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span className={`badge ${cfg.cls}`}>
+                        <span className={`status-dot dot-${priority}`} />
+                        {cfg.label}
+                      </span>
+                      <span style={{
+                        fontSize: '0.7rem', fontWeight: 600,
+                        padding: '3px 10px', borderRadius: 20,
+                        background: apt.status === 'upcoming' ? '#dbeafe' : '#e0f2fe',
+                        color: apt.status === 'upcoming' ? '#1d4ed8' : '#0369a1',
+                      }}>
+                        {apt.status.charAt(0).toUpperCase() + apt.status.slice(1)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            {myAppointments.filter(a => !['cancelled', 'Cancelled'].includes(a.status)).length === 0 && (
+              <div style={{ textAlign: 'center', padding: 24, color: 'var(--text-muted)' }}>
+                No active appointments.
+              </div>
+            )}
+          </div>
         </div>
       )}
 
