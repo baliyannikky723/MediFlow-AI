@@ -13,6 +13,11 @@ const BASE_URL =
 
 function getToken(): string | null {
   if (typeof window === "undefined") return null;
+  // Use doctor token when on doctor portal pages, patient token otherwise
+  const path = window.location.pathname;
+  if (path.startsWith("/demo/doctor")) {
+    return localStorage.getItem("mediflow_doctor_token") || localStorage.getItem("mediflow_token");
+  }
   return localStorage.getItem("mediflow_token");
 }
 
@@ -147,7 +152,7 @@ export interface Appointment {
 export interface DashboardSummary {
   totalPatients: number;
   todayAppointments: number;
-  emergencyCases: number;
+  emergencyPatients: number;
   availableDoctors: number;
 }
 
@@ -260,7 +265,7 @@ export const appointmentsApi = {
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
 
 export const dashboardApi = {
-  summary:          () => get<{ success: boolean; data: DashboardSummary }>("/api/dashboard/summary"),
+  summary:          () => get<{ success: boolean; data: { stats: DashboardSummary } }>("/api/dashboard/summary"),
   monthlyVisits:    () => get<{ success: boolean; data: MonthlyVisit[] }>("/api/dashboard/monthly-visits"),
   caseDistribution: () => get<{ success: boolean; data: CaseDistribution[] }>("/api/dashboard/case-distribution"),
   doctorLoad:       () => get<{ success: boolean; data: DoctorLoad[] }>("/api/dashboard/doctor-load"),

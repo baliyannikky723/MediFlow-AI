@@ -37,7 +37,12 @@ export function PatientSidebar({ activeTab, onTabChange, patientName, riskLabel,
   const router = useRouter();
 
   const handleLogout = () => {
-    try { localStorage.removeItem("mediflow_user"); } catch { }
+    try {
+      localStorage.removeItem("mediflow_token");
+      localStorage.removeItem("mediflow_user");
+      localStorage.removeItem("mediflow_appointments");
+      localStorage.removeItem("mediflow_recommended_doctors");
+    } catch { }
     router.push("/demo/patient/auth");
   };
 

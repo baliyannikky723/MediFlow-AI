@@ -259,9 +259,23 @@ export default function PatientHistoryPage() {
                                     🔗 Source: {(rec as any).appointmentSource === "chatbot" ? "Booked via AI Assistant" : "Manually Booked"}
                                   </p>
                                 </div>
-                                <span className="text-[11px] bg-emerald-50 border border-emerald-200 text-emerald-700 px-2 py-1 rounded-full font-semibold">
-                                  Confirmed
-                                </span>
+                                <div className="flex flex-col gap-2 items-end">
+                                  <span className="text-[11px] bg-emerald-50 border border-emerald-200 text-emerald-700 px-2 py-1 rounded-full font-semibold">
+                                    Confirmed
+                                  </span>
+                                  <button
+                                    onClick={() => {
+                                      localStorage.setItem(
+                                        "mediflow_reappointment_doctor",
+                                        JSON.stringify((rec as any).assignedDoctor)
+                                      );
+                                      router.push("/demo/patient/ai-assistant");
+                                    }}
+                                    className="text-[11px] bg-[#1B4965] text-white px-3 py-1.5 rounded-full font-semibold hover:bg-[#163d52] transition-colors"
+                                  >
+                                    🔄 Re-appointment
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           )}

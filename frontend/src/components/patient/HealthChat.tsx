@@ -334,8 +334,13 @@ export default function HealthChat() {
         dateTime: tomorrow.toISOString(),
         timeSlot: "10:00",
         status: "upcoming",
+        risk: agentResult?.triage?.risk || "NORMAL",
         reason: agentResult?.triage?.reason || "AI Triage Referral",
-        priority: agentResult?.triage?.risk === "EMERGENCY" ? "emergency" : "success",
+        priority: agentResult?.triage?.risk === "EMERGENCY" 
+          ? "emergency" 
+          : agentResult?.triage?.risk === "HIGH"
+          ? "warning"
+          : "success",
       });
       pushAI(`✅ Appointment confirmed with **${doc.name}** (${doc.specialization})!\n⭐ Rating: ${doc.rating} · Fee: ₹${doc.consultationFee}\n📅 Scheduled for tomorrow. Check your Appointments page!`);
 

@@ -113,7 +113,7 @@ export default function Dashboard() {
 
         if (cancelled) return;
 
-        if (summaryRes.status === 'fulfilled') setSummary(summaryRes.value.data);
+        if (summaryRes.status === 'fulfilled') setSummary(summaryRes.value.data.stats);
         if (visitsRes.status   === 'fulfilled') setVisitData(visitsRes.value.data || []);
         if (distRes.status     === 'fulfilled') {
           const raw = distRes.value.data || [];
@@ -159,7 +159,7 @@ export default function Dashboard() {
     },
     {
       label: 'Emergency Cases',
-      value: summary ? String(summary.emergencyCases) : '—',
+      value: summary ? String(summary.emergencyPatients) : '—',
       trend: '',
       up: false,
       icon: AlertTriangle,
@@ -217,7 +217,7 @@ export default function Dashboard() {
         <div className="wb-stats">
           {[
             { val: summary ? String(summary.todayAppointments) : '—', label: "Today's Patients" },
-            { val: summary ? String(summary.emergencyCases)    : '—', label: 'Emergencies'      },
+            { val: summary ? String(summary.emergencyPatients) : '—', label: 'Emergencies'      },
             { val: summary ? String(summary.availableDoctors)  : '—', label: 'Doctors On Duty'  },
           ].map(s => (
             <div key={s.label} style={{ textAlign: 'center' }}>
@@ -461,7 +461,8 @@ export default function Dashboard() {
               </div>
             ) : appointments.map((a, i) => {
               const { hour, min } = parseApptTime(a.dateTime);
-              const priority = (a.status === 'emergency' ? 'emergency' : a.status === 'urgent' ? 'warning' : 'success') as 'emergency' | 'warning' | 'success';
+              const priority = a.priority === 'emergency' ? 'emergency' : a.priority === 'warning' ? 'warning' : 'success';
+              const cfg = PRIORITY_CONFIG[priority];
               return (
                 <div key={a._id || i} className="appt-item" id={`appt-${i}`}>
                   <div className="appt-time">
@@ -470,10 +471,13 @@ export default function Dashboard() {
                   </div>
                   <div className="appt-info">
                     <div className="appt-name">{a.patientName || 'Patient'}</div>
-                    <div className="appt-type">{a.specialization || a.reason || 'Consultation'}</div>
+                    <div className="appt-type">{a.doctorName ? `Dr. ${a.doctorName.replace('Dr. ', '')}` : 'Doctor'} · {a.reason || 'Consultation'}</div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span className={`status-dot dot-${priority}`} />
+                    <span className={`badge ${cfg.cls}`}>
+                      <span className={`status-dot dot-${priority}`} />
+                      {cfg.label}
+                    </span>
                   </div>
                 </div>
               );
@@ -509,7 +513,7 @@ export default function Dashboard() {
                   <div className="doctor-spec">
                     {d.specialization} ·{' '}
                     <span style={{ color: 'var(--primary)', fontWeight: 600 }}>
-                      {d.patients ?? '—'} patients
+                      {d.totalPatients ?? 0} Patients
                     </span>
                   </div>
                 </div>

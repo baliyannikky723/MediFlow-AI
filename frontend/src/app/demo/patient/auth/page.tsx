@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   UserCircle, User, Mail, Lock, Ruler, Weight, Droplets,
@@ -37,13 +37,8 @@ export default function PatientAuthPage() {
   const [medications, setMedications] = useState("");
   const [allergies, setAllergies]     = useState("");
 
-  /* ── Auto-redirect if already logged in ── */
-  useEffect(() => {
-    try {
-      const token = localStorage.getItem("mediflow_token");
-      if (token) router.replace("/demo/patient/dashboard");
-    } catch {}
-  }, [router]);
+
+
 
   const toggleCondition = (c: string) =>
     setConditions(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]);

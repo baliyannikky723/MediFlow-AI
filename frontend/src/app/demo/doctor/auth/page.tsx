@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Stethoscope, Lock, Mail, ShieldCheck } from "lucide-react";
 import { PageContainer } from "../../../../components/ui/PageContainer";
@@ -22,6 +22,14 @@ export default function DoctorAuthPage() {
   const [formError, setFormError]     = useState("");
   const [loading, setLoading]         = useState(false);
 
+  // Auto-redirect if already logged in as doctor
+  useEffect(() => {
+    try {
+      const token = localStorage.getItem("mediflow_doctor_token");
+      if (token) router.replace("/demo/doctor");
+    } catch {}
+  }, [router]);
+
   const handleLogin = async () => {
     let isValid = true;
 
@@ -42,8 +50,9 @@ export default function DoctorAuthPage() {
 
     try {
       const res = await authApi.login({ email, password });
-      localStorage.setItem("mediflow_token", res.token);
-      localStorage.setItem("mediflow_user", JSON.stringify(res.user));
+      // Use doctor-specific keys to avoid overwriting patient session
+      localStorage.setItem("mediflow_doctor_token", res.token);
+      localStorage.setItem("mediflow_doctor_user", JSON.stringify(res.user));
       setRole("doctor");
       router.push("/demo/doctor");
     } catch (err: unknown) {

@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import {
   LayoutDashboard, Calendar, FileText, Stethoscope,
   Settings, Activity, LogOut, ChevronRight
@@ -10,6 +11,28 @@ const NAV_ITEMS = [
 ];
 
 export default function Sidebar({ activePage, onNavigate }: { activePage: string; onNavigate: (page: string) => void }) {
+  const [doctorName, setDoctorName] = useState('Doctor');
+  const [doctorSpec, setDoctorSpec] = useState('');
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('mediflow_doctor_user');
+      if (stored) {
+        const u = JSON.parse(stored);
+        if (u?.name) setDoctorName(u.name);
+        if (u?.specialization) setDoctorSpec(u.specialization);
+      }
+    } catch { }
+  }, []);
+
+  const handleLogout = () => {
+    try {
+      localStorage.removeItem('mediflow_doctor_token');
+      localStorage.removeItem('mediflow_doctor_user');
+    } catch { }
+    window.location.href = '/demo/doctor/auth';
+  };
+
   return (
     <aside className="sidebar">
       {/* Logo */}
@@ -44,15 +67,21 @@ export default function Sidebar({ activePage, onNavigate }: { activePage: string
       <div className="sidebar-user">
         <div
           className="avatar avatar-md"
-          style={{ background: 'var(--accent)' }}
+          style={{ background: 'var(--accent)', cursor: 'default' }}
         >
-          Dr
+          {doctorName.split(' ').filter((_,i) => i < 2).map(n => n[0]).join('').toUpperCase() || 'Dr'}
         </div>
         <div className="sidebar-user-info">
-          <div className="sidebar-user-name">Dr. Sarah Khan</div>
-          <div className="sidebar-user-role">Admin · General Physician</div>
+          <div className="sidebar-user-name">{doctorName}</div>
+          <div className="sidebar-user-role">{doctorSpec || 'Physician'}</div>
         </div>
-        <LogOut size={15} style={{ color: 'rgba(255,255,255,0.35)', flexShrink: 0 }} />
+        <button
+          onClick={handleLogout}
+          title="Log Out"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}
+        >
+          <LogOut size={15} style={{ color: 'rgba(255,255,255,0.55)', flexShrink: 0 }} />
+        </button>
       </div>
     </aside>
   );
