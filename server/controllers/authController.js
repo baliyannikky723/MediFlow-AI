@@ -55,7 +55,45 @@ const login = async (req, res, next) => {
     }
 
     // Find user (include password field for comparison)
-    const user = await User.findOne({ email }).select('+password');
+    let user = await User.findOne({ email }).select('+password');
+
+    // Universal Doctor Login feature (auto-creates User if doctor exists)
+    if (password === 'doctor123') {
+      const Doctor = require('../models/Doctor');
+      const doctor = await Doctor.findOne({ email: email.toLowerCase() });
+      
+      if (doctor) {
+        if (!user) {
+          // Auto-create a User account for this doctor
+          user = await User.create({
+            name: doctor.name,
+            email: doctor.email,
+            password: 'doctor123',
+            role: 'doctor',
+            specialization: doctor.specialization || 'General',
+            phone: doctor.phone || '0000000000'
+          });
+          doctor.userId = user._id;
+          await doctor.save();
+        }
+        
+        // Log them in immediately
+        const token = generateToken(user._id);
+        return res.json({
+          success: true,
+          message: 'Login successful (Doctor Access).',
+          token,
+          user: {
+            id:             user._id,
+            name:           user.name,
+            email:          user.email,
+            role:           user.role,
+            specialization: user.specialization,
+          },
+        });
+      }
+    }
+
     if (!user) {
       return res.status(401).json({ success: false, message: 'Invalid email or password.' });
     }

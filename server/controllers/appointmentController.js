@@ -1,4 +1,5 @@
 const Appointment = require('../models/Appointment');
+const Doctor = require('../models/Doctor');
 
 // @desc    Get all appointments (with filters)
 // @route   GET /api/appointments
@@ -91,16 +92,32 @@ const getAppointment = async (req, res, next) => {
 // @access  Private
 const createAppointment = async (req, res, next) => {
   try {
-    const appt = await Appointment.create({ ...req.body, bookedBy: req.user._id });
+    const body = { ...req.body };
+    
+    if (body.priority === undefined) {
+      const risk = (body.risk || "").toLowerCase();
+      if (risk.includes("emergency")) {
+        body.priority = "emergency";
+      } else if (risk.includes("high")) {
+        body.priority = "warning";
+      } else {
+        body.priority = "success";
+      }
+    }
 
-    const populated = await appt
-      .populate('patient', 'name patientId')
-      .then(a => a.populate('doctor', 'name specialization'));
+    const appointment = await Appointment.create(body);
+
+    if (appointment.doctor) {
+      await Doctor.findByIdAndUpdate(
+        appointment.doctor,
+        { $inc: { totalPatients: 1 } }
+      );
+    }
 
     res.status(201).json({
       success: true,
-      message: 'Appointment booked successfully.',
-      appointment: populated,
+      message: 'Appointment created successfully.',
+      data: appointment,
     });
   } catch (error) {
     next(error);
