@@ -17,7 +17,7 @@ router.put('/:id', protect, (req, res) => {
   const prompts = JSON.parse(fs.readFileSync(PROMPTS_PATH, 'utf8'));
   const index = prompts.findIndex(p => p.id === req.params.id);
   if (index === -1) return res.status(404).json({ success: false, message: 'Prompt not found' });
-  
+
   prompts[index].content = req.body.content;
   fs.writeFileSync(PROMPTS_PATH, JSON.stringify(prompts, null, 2));
   res.json({ success: true, message: 'Prompt updated', data: prompts[index] });
